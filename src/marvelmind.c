@@ -556,10 +556,11 @@ static void process_waypoint_data(struct MarvelmindHedge * hedge, uint8_t *buffe
 
 ////////////////////////
 
-void
 #ifndef WIN32
-*
-#endif // WIN32
+void *
+#else
+unsigned __stdcall
+#endif
 Marvelmind_Thread_ (void* param)
 {
     struct MarvelmindHedge * hedge=(struct MarvelmindHedge*) param;
@@ -773,9 +774,21 @@ Marvelmind_Thread_ (void* param)
             }
         }
     }
+
+    #ifdef WIN32
+    if(ttyHandle != PORT_NOT_OPENED) {
+        CloseHandle(ttyHandle);
+    }
+    #else
+        close(ttyHandle);
+    #endif
+
 #ifndef WIN32
     return NULL;
+#else
+    return 0;
 #endif
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -837,7 +850,8 @@ void startMarvelmindHedge (struct MarvelmindHedge * hedge)
     hedge->quality.updated= false;
 
 #ifdef WIN32
-    _beginthread (Marvelmind_Thread_, 0, hedge);
+    //_beginthread (Marvelmind_Thread_, 0, hedge);
+    hedge->thread_ = (HANDLE)_beginthreadex(NULL, 0, Marvelmind_Thread_, (void*)hedge, 0, NULL);
 #else
     pthread_create (&hedge->thread_, NULL, Marvelmind_Thread_, hedge);
 #endif
